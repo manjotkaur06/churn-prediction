@@ -1,5 +1,6 @@
-flask
+gradio
 numpy
 scikit-learn
+pandas
+pickle-mixin
 xgboost
-gunicorn

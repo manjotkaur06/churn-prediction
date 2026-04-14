@@ -1,54 +1,29 @@
-from flask import Flask, request, jsonify
+import gradio as gr
 import pickle
 import numpy as np
-import pandas as pd
-import os
 
-app = Flask(__name__)
+# Load model
+model = pickle.load(open("model.pkl", "rb"))
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+def predict(tenure, monthly_charges, total_charges):
+    features = np.array([[tenure, monthly_charges, total_charges]])
+    prediction = model.predict(features)
 
-model = pickle.load(open(os.path.join(BASE_DIR, 'models', 'model.pkl'), 'rb'))
-scaler = pickle.load(open(os.path.join(BASE_DIR, 'models', 'scaler.pkl'), 'rb'))
-columns = pickle.load(open(os.path.join(BASE_DIR, 'models', 'columns.pkl'), 'rb'))
+    if prediction[0] == 1:
+        return "⚠️ Customer will churn"
+    else:
+        return "✅ Customer will NOT churn"
 
-@app.route('/')
-def home():
-    return "Churn API Running 🚀"
+demo = gr.Interface(
+    fn=predict,
+    inputs=[
+        gr.Number(label="Tenure"),
+        gr.Number(label="Monthly Charges"),
+        gr.Number(label="Total Charges")
+    ],
+    outputs="text",
+    title="Customer Churn Prediction",
+    description="Predict if a customer will leave the service"
+)
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    try:
-        input_data = request.json
-        
-        # Convert to DataFrame
-        df = pd.DataFrame([input_data])
-        
-        # One-hot encoding (same as training)
-        df = pd.get_dummies(df)
-        
-        # Align columns (CRITICAL STEP)
-        df = df.reindex(columns=columns, fill_value=0)
-        
-        # Scale
-        scaled = scaler.transform(df)
-        
-        # Predict
-        prob = model.predict_proba(scaled)[0][1]
-
-        return jsonify({
-            'churn_probability': round(prob, 3),
-            'risk_level': 'High' if prob > 0.6
-                         else 'Medium' if prob > 0.35
-                         else 'Low'
-        })
-    
-    except Exception as e:
-        return jsonify({'error': str(e)})
-    
-
-if __name__ == '__main__':
-    import os
-
-port = int(os.environ.get("PORT", 10000))
-app.run(host='0.0.0.0', port=port)
+demo.launch()
