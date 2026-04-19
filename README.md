@@ -132,7 +132,7 @@ python app.py
 * Reconstructed full feature vector
 * Applied `scaler.pkl`
 
-💡 This reflects real-world ML deployment debugging.
+
 
 ---
 
